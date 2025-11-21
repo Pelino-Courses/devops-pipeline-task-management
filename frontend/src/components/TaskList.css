@@ -1,0 +1,35 @@
+.task-list {
+    margin-top: 1rem;
+}
+
+.task-count {
+    color: #7f8c8d;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    color: #2c3e50;
+    margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+    color: #7f8c8d;
+    margin: 0;
+}
