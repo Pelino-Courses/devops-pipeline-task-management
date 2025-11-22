@@ -1,0 +1,12 @@
+# ZAP Scanning Rules
+# Format: <action> <context> <url-pattern> <parameter> <cve> <cwe> <wasc>
+# Actions: IGNORE, INFO, WARN, FAIL
+
+# Ignore false positives
+IGNORE	All	http://localhost:3000	.*	10020	200	15
+
+# Informational findings only
+INFO	All	.*	.*	10015	.*	.*
+
+# Custom rules
+# Add your custom ZAP rules here

@@ -1,0 +1,51 @@
+---
+- name: Install monitoring tools
+  apt:
+    name:
+      - prometheus-node-exporter
+      - sysstat
+      - htop
+      - iotop
+    state: present
+
+- name: Enable node exporter
+  systemd:
+    name: prometheus-node-exporter
+    state: started
+    enabled: yes
+
+- name: Create monitoring script
+  copy:
+    content: |
+      #!/bin/bash
+      echo "=== System Status ==="
+      echo "CPU Usage:"
+      top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
+      echo ""
+      echo "Memory Usage:"
+      free -m | awk 'NR==2{printf "Used: %sMB (%.2f%%)\n", $3, $3*100/$2 }'
+      echo ""
+      echo "Disk Usage:"
+      df -h | awk '$NF=="/"{printf "Used: %s (%s)\n", $3, $5}'
+      echo ""
+      echo "Docker Containers:"
+      docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+      echo ""
+      echo "System Load:"
+      uptime
+    dest: /usr/local/bin/system-status.sh
+    mode: '0755'
+
+- name: Create disk space check script
+  copy:
+    content: |
+      #!/bin/bash
+      THRESHOLD=80
+      USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+      if [ "$USAGE" -gt "$THRESHOLD" ]; then
+        echo "WARNING: Disk usage is at ${USAGE}%"
+      else
+        echo "Disk usage is OK: ${USAGE}%"
+      fi
+    dest: /usr/local/bin/check-disk.sh
+    mode: '0755'

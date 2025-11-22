@@ -1,0 +1,82 @@
+name: DAST with OWASP ZAP
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly on Sunday at 3 AM
+
+jobs:
+  zap-baseline-scan:
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    if: secrets.VM_PUBLIC_IP != ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: ZAP Baseline Scan - Frontend
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: 'http://${{ secrets.VM_PUBLIC_IP }}:3000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a -j'
+        continue-on-error: true
+
+      - name: ZAP Baseline Scan - Backend API
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: 'http://${{ secrets.VM_PUBLIC_IP }}:5000'
+          cmd_options: '-a -j'
+        continue-on-error: true
+
+      - name: Upload ZAP results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: zap-reports
+          path: |
+            report_html.html
+            report_json.json
+
+  zap-full-scan:
+    name: OWASP ZAP Full Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && secrets.VM_PUBLIC_IP != ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.7.0
+        with:
+          target: 'http://${{ secrets.VM_PUBLIC_IP }}:3000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a -j'
+        continue-on-error: true
+
+      - name: Upload ZAP Full Scan results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: zap-full-scan-reports
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+
+  scan-summary:
+    name: DAST Summary
+    runs-on: ubuntu-latest
+    needs: [zap-baseline-scan]
+    if: always()
+    
+    steps:
+      - name: Summary
+        run: |
+          echo "## DAST Scan Results :mag:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "OWASP ZAP scans completed. Download artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** http://${{ secrets.VM_PUBLIC_IP }}" >> $GITHUB_STEP_SUMMARY

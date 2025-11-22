@@ -1,0 +1,69 @@
+---
+- name: Create application directory
+  file:
+    path: /opt/taskmanager
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: docker
+    mode: '0755'
+
+- name: Login to Azure Container Registry
+  shell: |
+    az acr login --name {{ acr_name }}
+  environment:
+    AZURE_CLIENT_ID: "{{ lookup('env', 'ARM_CLIENT_ID') }}"
+    AZURE_CLIENT_SECRET: "{{ lookup('env', 'ARM_CLIENT_SECRET') }}"
+    AZURE_TENANT_ID: "{{ lookup('env', 'ARM_TENANT_ID') }}"
+  when: acr_name is defined
+
+- name: Create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/taskmanager/docker-compose.yml
+    owner: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Create environment file
+  template:
+    src: .env.j2
+    dest: /opt/taskmanager/.env
+    owner: "{{ ansible_user }}"
+    mode: '0600'
+
+- name: Pull latest images
+  community.docker.docker_compose:
+    project_src: /opt/taskmanager
+    pull: yes
+  when: acr_login_server is defined
+
+- name: Start application containers
+  community.docker.docker_compose:
+    project_src: /opt/taskmanager
+    state: present
+    restarted: yes
+
+- name: Wait for backend to be ready
+  uri:
+    url: "http://localhost:5000/health"
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 2
+
+- name: Wait for frontend to be ready
+  uri:
+    url: "http://localhost:3000"
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 2
+
+- name: Display application status
+  debug:
+    msg:
+      - "Application deployed successfully!"
+      - "Frontend: http://{{ ansible_host }}:3000"
+      - "Backend: http://{{ ansible_host }}:5000"
+      - "Health: http://{{ ansible_host }}:5000/health"

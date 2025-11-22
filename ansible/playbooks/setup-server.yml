@@ -1,0 +1,53 @@
+---
+- name: Configure DevOps Task Manager Server
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    acr_name: "{{ lookup('env', 'ACR_NAME') }}"
+    acr_login_server: "{{ lookup('env', 'ACR_LOGIN_SERVER') }}"
+    image_tag: "{{ lookup('env', 'IMAGE_TAG') | default('latest', true) }}"
+    db_user: "{{ lookup('env', 'DB_USER') | default('taskuser', true) }}"
+    db_password: "{{ lookup('env', 'DB_PASSWORD') }}"
+    db_name: "{{ lookup('env', 'DB_NAME') | default('taskmanager', true) }}"
+
+  pre_tasks:
+    - name: Display target host information
+      debug:
+        msg: "Configuring {{ inventory_hostname }} ({{ ansible_host }})"
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+  roles:
+    - security
+    - docker
+    - monitoring
+    - app-deploy
+
+  post_tasks:
+    - name: Verify application is running
+      uri:
+        url: "http://localhost:5000/health"
+        status_code: 200
+      register: health_check
+      until: health_check.status == 200
+      retries: 5
+      delay: 3
+
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "========================================="
+          - "Deployment completed successfully!"
+          - "========================================="
+          - "Frontend URL: http://{{ ansible_host }}:3000"
+          - "Backend API: http://{{ ansible_host }}:5000"
+          - "Health Check: http://{{ ansible_host }}:5000/health"
+          - "========================================="
+          - "Monitoring: Run 'system-status.sh' on server"
+          - "Disk Check: Run 'check-disk.sh' on server"
+          - "========================================="

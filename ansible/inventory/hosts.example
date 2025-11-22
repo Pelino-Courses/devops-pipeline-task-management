@@ -1,0 +1,8 @@
+# Example static inventory file for testing
+# Use this when azure_rm.yml dynamic inventory is not available
+
+[app_servers]
+# azure-vm ansible_host=YOUR_VM_PUBLIC_IP ansible_user=azureuser
+
+# Example:
+# azure-vm ansible_host=20.51.234.123 ansible_user=azureuser
